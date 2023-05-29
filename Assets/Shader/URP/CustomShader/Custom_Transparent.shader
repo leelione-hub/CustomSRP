@@ -1,0 +1,72 @@
+Shader "Custom/URP/Custom_Transparent"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _BaseColor("DiffuseColor",Color)=(1,1,1,1)
+        _BaseColorInt("DiffuseInt",float)=1
+    }
+    SubShader
+    {
+        Tags { "RenderPipeline" = "UniversalPipeline" }
+
+        Pass
+        {
+            Tags{"LightMode"="UniversalForward"  "RenderType"="Transparent" "Queue"="Transparent"}
+
+            Cull Off
+
+            Blend SrcAlpha OneMinusSrcAlpha
+
+            HLSLPROGRAM
+
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            CBUFFER_START(UnityPerMaterial)
+            float4 _MainTex_ST;
+            real4 _BaseColor;
+            real _BaseColorInt;
+            CBUFFER_END
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+                float4 normal:NORMAL;
+            };
+
+            struct Varings
+            {
+                float4 positionCS : SV_POSITION;
+                float4 uv : TEXCOORD0;
+            };
+
+            TEXTURE2D (_MainTex);
+            SAMPLER(sampler_MainTex);
+
+            Varings vert (Attributes IN)
+            {
+                Varings OUT;
+                VertexPositionInputs positionInputs = GetVertexPositionInputs(IN.positionOS.xyz);
+                OUT.positionCS = positionInputs.positionCS;
+                //OUT.vertex = TransformObjectToHClip(v.vertex.xyz);
+                OUT.uv.xy = TRANSFORM_TEX(IN.uv, _MainTex);
+                return OUT;
+            }
+
+            half4 frag (Varings i) : SV_Target
+            {
+                // sample the texture
+                half4 col = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex, i.uv.xy);
+                clip(col.a-0.01);
+                col*=_BaseColor*_BaseColorInt;
+                return col;
+            }
+            ENDHLSL
+        }
+    }
+    Fallback "Universal Render Pipeline/UnLit"
+}
